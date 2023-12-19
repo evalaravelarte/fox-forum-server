@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import net.ausiasmarch.foxforumserver.entity.UserEntity;
 import net.ausiasmarch.foxforumserver.helper.JWTHelper;
 import net.ausiasmarch.foxforumserver.repository.UserRepository;
-import net.ausiasmarch.foxforumserver.service.EmailService;
+import net.ausiasmarch.foxforumserver.service.ResetPasswordService;
 
 @CrossOrigin(origins = "*", allowedHeaders = "*", maxAge = 3600)
 @RestController
@@ -25,35 +25,13 @@ import net.ausiasmarch.foxforumserver.service.EmailService;
 public class ResetPasswordController {
 
     @Autowired
-    private EmailService oEmailService;
+    private ResetPasswordService oResetPasswordService;
 
-    @Autowired
-    private UserRepository oUserRepository;
 
     @PostMapping("/password")
     public ResponseEntity<String> resetPassword(@RequestBody Map<String, String> requestBody) {
         String to = requestBody.get("to");
-        System.out.println(to);
-
-        Optional<UserEntity> oUser = oUserRepository.findByEmail(to);
-
-        if (oUser.isPresent()) {
-            // Generar un nuevo token JWT
-            String resetToken = JWTHelper.generateJWT(oUser.get().getUsername());
-
-            // Actualizar el token en la base de datos
-            UserEntity userEntity = oUser.get();
-            userEntity.setResetPasswordToken(resetToken);
-            oUserRepository.save(userEntity);
-
-            // Enviar el correo electrónico con el nuevo token
-            oEmailService.sendEmail(to, resetToken);
-
-            return ResponseEntity.ok("\"Verify email by the link sent on your email address\"");
-        } else {
-            // es mejor lanzar excepciones personalizadas
-            return new ResponseEntity<>("\"Error al encontrar el usuario\"", HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        return ResponseEntity.ok(oResetPasswordService.sendEmail(to));
     }
 
     @PutMapping("/new")
@@ -62,23 +40,7 @@ public class ResetPasswordController {
         String password = requestBody.get("password");
         String confirmPassword = requestBody.get("confirmPassword");
 
-        if (password.equals(confirmPassword)) {
-            // Obtener el nombre de usuario del token
-            Optional<UserEntity> oUserFromDatabase = oUserRepository.findByResetPasswordToken(token);
-
-            if (oUserFromDatabase.isPresent()) {
-                // Actualizar la contraseña del usuario
-                UserEntity oUserToUpdate = oUserFromDatabase.get();
-                oUserToUpdate.setPassword(password);
-                oUserRepository.save(oUserToUpdate);
-
-                return ResponseEntity.ok("\"Password updated successfully\"");
-            } else {
-                return ResponseEntity.ok("\"User not found\"");
-            }
-        } else {
-            return ResponseEntity.ok("\"Passwords do not match\"");
-        }
+        return ResponseEntity.ok(oResetPasswordService.updatePassword(token, password, confirmPassword));
 
     }
 
