@@ -62,6 +62,7 @@ public class ResetPasswordService {
                 // Actualizar la contraseña del usuario
                 UserEntity oUserToUpdate = oUserFromDatabase.get();
                 oUserToUpdate.setPassword(password);
+                oUserToUpdate.setResetPasswordToken(null);
                 oUserRepository.save(oUserToUpdate);
 
                 return "\"Password updated successfully\"";
